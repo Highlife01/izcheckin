@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from "react";
 import { useApp } from "@/contexts/AppContext";
-import { Venue, VenueCategory } from "@/types/venue";
+import { VenueCategory } from "@/types/venue";
+import { POPULAR_CITIES } from "@/data/venuesData";
 import { 
   Search, MapPin, Star, Flame, Users, Navigation, 
-  Map as MapIcon, Filter, Check, Heart, Bookmark 
+  Map as MapIcon, Filter, Check, Heart, ChevronDown 
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,15 +18,16 @@ const CATEGORIES: VenueCategory[] = [
   "Tatlı & Fırın",
 ];
 
-const DISTRICTS = ["Tümü", "Seyhan", "Çukurova", "Yüreğir"];
-
 export const DiscoverView: React.FC = () => {
   const { 
     venues, 
     setSelectedVenue, 
     setCheckInVenue, 
     toggleFavorite, 
-    isFavorite 
+    isFavorite,
+    selectedCity,
+    setSelectedCity,
+    setIsCityModalOpen
   } = useApp();
 
   const [search, setSearch] = useState("");
@@ -34,13 +36,28 @@ export const DiscoverView: React.FC = () => {
   const [quickFilter, setQuickFilter] = useState<"all" | "trend" | "quiet" | "top" | "favs">("all");
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
 
+  // Mevcut seçili şehre göre ilçeleri dinamik çıkar
+  const availableDistricts = useMemo(() => {
+    const cityVenues = selectedCity === "Tüm Türkiye" 
+      ? venues 
+      : venues.filter(v => v.city === selectedCity);
+    const set = new Set(cityVenues.map(v => v.district));
+    return ["Tümü", ...Array.from(set)];
+  }, [venues, selectedCity]);
+
   const filteredVenues = useMemo(() => {
     return venues.filter((venue) => {
+      // Şehir filtresi
+      if (selectedCity !== "Tüm Türkiye" && venue.city !== selectedCity) {
+        return false;
+      }
+
       // Arama filtresi
       const matchSearch =
         venue.name.toLowerCase().includes(search.toLowerCase()) ||
         venue.address.toLowerCase().includes(search.toLowerCase()) ||
         venue.subcategory.toLowerCase().includes(search.toLowerCase()) ||
+        venue.city.toLowerCase().includes(search.toLowerCase()) ||
         (venue.popularItems && venue.popularItems.some(item => item.toLowerCase().includes(search.toLowerCase())));
 
       if (!matchSearch) return false;
@@ -63,18 +80,26 @@ export const DiscoverView: React.FC = () => {
 
       return true;
     });
-  }, [venues, search, selectedCategory, selectedDistrict, quickFilter, isFavorite]);
+  }, [venues, search, selectedCity, selectedCategory, selectedDistrict, quickFilter, isFavorite]);
 
   return (
     <div className="space-y-6">
-      {/* Başlık ve Görünüm Değiştirici */}
+      {/* Başlık ve Şehir Seçici */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-[#79928a]">
-            Adana Mekân Radarı
-          </span>
-          <h1 className="font-display text-3xl font-extrabold tracking-tight text-[#17362c]">
-            Keşfet & Gez
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#79928a]">
+              Mekân Radarı
+            </span>
+            <button
+              onClick={() => setIsCityModalOpen(true)}
+              className="inline-flex items-center gap-1 rounded-full bg-[#eef6db] px-2.5 py-0.5 text-[11px] font-extrabold text-[#3a5818] border border-[#d2e8aa]"
+            >
+              📍 {selectedCity} <ChevronDown size={11} />
+            </button>
+          </div>
+          <h1 className="font-display text-3xl font-extrabold tracking-tight text-[#17362c] mt-1">
+            {selectedCity === "Tüm Türkiye" ? "Türkiye Geneli Keşif" : `${selectedCity} Mekânları`}
           </h1>
         </div>
 
@@ -106,9 +131,32 @@ export const DiscoverView: React.FC = () => {
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Mekân adı, lezzet (kebap, cheesecake) veya bölge ara..."
+          placeholder="Mekân adı, şehir (İstanbul, İzmir, Antep), lezzet ara..."
           className="h-13 rounded-2xl border-[#dbe6df] bg-white pl-11 pr-4 text-sm shadow-[0_6px_25px_rgba(23,54,44,0.04)] placeholder:text-[#a0b2aa] focus-visible:ring-[#17362c]"
         />
+      </div>
+
+      {/* Şehirler Yatay Kaydırma */}
+      <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+        {POPULAR_CITIES.map((city) => {
+          const isCurrent = selectedCity === city;
+          return (
+            <button
+              key={city}
+              onClick={() => {
+                setSelectedCity(city);
+                setSelectedDistrict("Tümü");
+              }}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
+                isCurrent
+                  ? "bg-[#17362c] text-[#dfff62] shadow-sm"
+                  : "bg-white text-[#567266] border border-[#dbe5df] hover:border-[#b7c9bf]"
+              }`}
+            >
+              {city}
+            </button>
+          );
+        })}
       </div>
 
       {/* Kategoriler Yatay Kaydırma */}
@@ -119,10 +167,10 @@ export const DiscoverView: React.FC = () => {
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold transition ${
+              className={`shrink-0 rounded-2xl px-4 py-2 text-xs font-bold transition ${
                 isActive
-                  ? "bg-[#17362c] text-[#dfff62] shadow-sm"
-                  : "bg-white text-[#567266] border border-[#dbe5df] hover:border-[#b7c9bf]"
+                  ? "bg-[#dfff62] text-[#1c392f] font-extrabold shadow-sm"
+                  : "bg-[#eef4f0] text-[#4d6a5d] hover:bg-[#e4ece7]"
               }`}
             >
               {cat}
@@ -131,19 +179,19 @@ export const DiscoverView: React.FC = () => {
         })}
       </div>
 
-      {/* İlçe ve Hızlı Filtre Butonları */}
+      {/* İlçe / Semt ve Hızlı Filtre Butonları */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-y border-[#dfe8e1] py-3 text-xs">
-        <div className="flex items-center gap-1.5">
-          <span className="font-bold text-[#79928a] flex items-center gap-1">
-            <MapPin size={13} /> İlçe:
+        <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
+          <span className="font-bold text-[#79928a] shrink-0 flex items-center gap-1">
+            <MapPin size={13} /> Semt:
           </span>
-          {DISTRICTS.map((dist) => (
+          {availableDistricts.map((dist) => (
             <button
               key={dist}
               onClick={() => setSelectedDistrict(dist)}
-              className={`rounded-lg px-2.5 py-1 font-semibold transition ${
+              className={`shrink-0 rounded-lg px-2.5 py-1 font-semibold transition ${
                 selectedDistrict === dist
-                  ? "bg-[#dfff62] text-[#1c392f] font-extrabold"
+                  ? "bg-[#17362c] text-[#dfff62] font-extrabold"
                   : "text-[#627d72] hover:bg-white"
               }`}
             >
@@ -193,19 +241,19 @@ export const DiscoverView: React.FC = () => {
             <MapIcon size={28} />
           </div>
           <h3 className="font-display text-xl font-bold text-[#17362c]">
-            Adana Canlı Harita Görünümü
+            {selectedCity} Canlı Haritası
           </h3>
           <p className="text-xs text-[#637d72] max-w-sm mt-1 mb-4">
-            Aşağıdaki filtrelenmiş {filteredVenues.length} mekân harita üzerinde aktif olarak işaretlendi.
+            Filtrelenmiş {filteredVenues.length} popüler mekân harita üzerinde işaretlendi.
           </p>
-          <div className="flex flex-wrap justify-center gap-2 max-w-md">
-            {filteredVenues.slice(0, 8).map((v) => (
+          <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+            {filteredVenues.slice(0, 10).map((v) => (
               <button
                 key={v.id}
                 onClick={() => setSelectedVenue(v)}
                 className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-[#1c392f] shadow-sm hover:bg-[#dfff62] transition"
               >
-                📍 {v.name} ({v.activityScore}%)
+                📍 {v.name} ({v.city}) · %{v.activityScore}
               </button>
             ))}
           </div>
@@ -216,12 +264,13 @@ export const DiscoverView: React.FC = () => {
             <div className="col-span-2 rounded-[28px] bg-white p-12 text-center text-sm text-[#738d81] border border-[#e2eae4]">
               <div className="text-3xl mb-2">🔍</div>
               <p className="font-bold text-[#203c30]">Aradığınız kriterlere uygun mekân bulunamadı.</p>
-              <p className="text-xs text-[#899f94] mt-1">Filtreleri sıfırlayarak tekrar arayabilirsiniz.</p>
+              <p className="text-xs text-[#899f94] mt-1">Filtreleri veya şehri değiştirerek tekrar arayabilirsiniz.</p>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => {
                   setSearch("");
+                  setSelectedCity("Tüm Türkiye");
                   setSelectedCategory("Tümü");
                   setSelectedDistrict("Tümü");
                   setQuickFilter("all");
@@ -246,7 +295,10 @@ export const DiscoverView: React.FC = () => {
                         className="cursor-pointer flex-1"
                       >
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="rounded-full bg-[#f0f5f1] px-2.5 py-0.5 text-[10px] font-bold text-[#3d5d4f]">
+                          <span className="rounded-full bg-[#17362c] px-2 py-0.5 text-[9px] font-bold text-[#dfff62]">
+                            {venue.city}
+                          </span>
+                          <span className="rounded-full bg-[#f0f5f1] px-2 py-0.5 text-[10px] font-bold text-[#3d5d4f]">
                             {venue.category}
                           </span>
                           <span className="text-[11px] font-medium text-[#7e948a]">
@@ -302,7 +354,7 @@ export const DiscoverView: React.FC = () => {
                             : "bg-[#e9f8f0] text-[#16805c]"
                         }`}
                       >
-                        <Flame size={10} fill="currentColor" /> {venue.activityScore}%
+                        <Flame size={10} fill="currentColor" /> {venue.activityScore}% Canlı
                       </span>
                     </div>
 

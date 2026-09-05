@@ -10,7 +10,8 @@ import {
   INITIAL_VENUES, 
   INITIAL_BADGES, 
   INITIAL_NOTIFICATIONS, 
-  INITIAL_CHECKINS 
+  INITIAL_CHECKINS,
+  POPULAR_CITIES 
 } from "@/data/venuesData";
 import { toast } from "sonner";
 
@@ -33,17 +34,22 @@ interface AppContextType {
   markAllNotificationsAsRead: () => void;
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  selectedCity: string;
+  setSelectedCity: (city: string) => void;
+  isCityModalOpen: boolean;
+  setIsCityModalOpen: (open: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const LOCAL_STORAGE_KEYS = {
-  VENUES: "izcheckin_venues_v1",
-  USER: "izcheckin_user_v1",
-  CHECKINS: "izcheckin_checkins_v1",
-  BADGES: "izcheckin_badges_v1",
-  NOTIFICATIONS: "izcheckin_notifs_v1",
-  FAVORITES: "izcheckin_favorites_v1",
+  VENUES: "izcheckin_venues_v2",
+  USER: "izcheckin_user_v2",
+  CHECKINS: "izcheckin_checkins_v2",
+  BADGES: "izcheckin_badges_v2",
+  NOTIFICATIONS: "izcheckin_notifs_v2",
+  FAVORITES: "izcheckin_favorites_v2",
+  CITY: "izcheckin_city_v2",
 };
 
 const DEFAULT_USER: UserProfile = {
@@ -51,15 +57,14 @@ const DEFAULT_USER: UserProfile = {
   name: "Cebrail Kara",
   avatarText: "CK",
   avatarBg: "bg-[#deff55] text-[#17362c]",
-  title: "Adana Şehir Kaşifi",
+  title: "Türkiye Şehir Kaşifi",
   level: 2,
-  currentPoints: 125,
-  nextLevelPoints: 200,
+  currentPoints: 150,
+  nextLevelPoints: 250,
   totalCheckins: 2,
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // State from LocalStorage or Initial Data
   const [venues, setVenues] = useState<Venue[]>(() => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_KEYS.VENUES);
@@ -68,6 +73,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return INITIAL_VENUES;
     }
   });
+
+  const [selectedCity, setSelectedCityState] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_KEYS.CITY);
+      return saved || "Tüm Türkiye";
+    } catch {
+      return "Tüm Türkiye";
+    }
+  });
+
+  const [isCityModalOpen, setIsCityModalOpen] = useState<boolean>(false);
+
+  const setSelectedCity = (city: string) => {
+    setSelectedCityState(city);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEYS.CITY, city);
+    } catch (e) { console.error(e); }
+  };
 
   const [user, setUser] = useState<UserProfile>(() => {
     try {
@@ -108,9 +131,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [favorites, setFavorites] = useState<number[]>(() => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_KEYS.FAVORITES);
-      return saved ? JSON.parse(saved) : [1, 2];
+      return saved ? JSON.parse(saved) : [101, 2];
     } catch {
-      return [1, 2];
+      return [101, 2];
     }
   });
 
@@ -178,7 +201,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       venueId: venue.id,
       venueName: venue.name,
       venueCategory: venue.category,
-      district: venue.district,
+      district: `${venue.district}, ${venue.city}`,
       userName: user.name,
       userAvatar: user.avatarText,
       mood: mood || "☕ Takılıyorum",
@@ -190,10 +213,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updatedCheckins = [newCheckIn, ...checkins];
     setCheckins(updatedCheckins);
 
-    // 1. Update Venue check-in count and activity score
+    // 1. Update Venue checkin count & activity score
     setVenues(prev => prev.map(v => {
       if (v.id === venue.id) {
-        const newScore = Math.min(100, v.activityScore + 4);
+        const newScore = Math.min(100, v.activityScore + 3);
         return {
           ...v,
           checkinCount: v.checkinCount + 1,
@@ -205,10 +228,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // 2. Check for badges unlocked
     let freshlyUnlockedBadge: Badge | undefined;
-    const totalVenueCount = new Set(updatedCheckins.map(c => c.venueId)).size;
+    const visitedCities = new Set(
+      updatedCheckins.map(c => {
+        const v = venues.find(item => item.id === c.venueId);
+        return v ? v.city : venue.city;
+      })
+    ).size;
+
     const kebapCheckins = updatedCheckins.filter(c => c.venueCategory === "Kebap & Ocakbaşı").length;
     const coffeeCheckins = updatedCheckins.filter(c => c.venueCategory === "Kahve & Kafe").length;
     const sweetCheckins = updatedCheckins.filter(c => c.venueCategory === "Tatlı & Fırın").length;
+    const coastCheckin = ["İstanbul", "İzmir", "Antalya"].includes(venue.city);
 
     const updatedBadges = badges.map(badge => {
       if (badge.unlocked) return badge;
@@ -219,6 +249,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (badge.id === "first_checkin") {
         newProgress = 1;
         shouldUnlock = true;
+      } else if (badge.id === "turkey_explorer") {
+        newProgress = visitedCities;
+        shouldUnlock = newProgress >= badge.maxProgress;
       } else if (badge.id === "kebap_guru") {
         newProgress = kebapCheckins;
         shouldUnlock = newProgress >= badge.maxProgress;
@@ -228,9 +261,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } else if (badge.id === "sweet_tooth") {
         newProgress = sweetCheckins;
         shouldUnlock = newProgress >= badge.maxProgress;
-      } else if (badge.id === "adana_explorer") {
-        newProgress = totalVenueCount;
-        shouldUnlock = newProgress >= badge.maxProgress;
+      } else if (badge.id === "bosphorus_coast") {
+        if (coastCheckin) {
+          newProgress = 1;
+          shouldUnlock = true;
+        }
       }
 
       if (shouldUnlock) {
@@ -249,21 +284,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setBadges(updatedBadges);
 
-    // 3. Update User points, checkin count, level
+    // 3. Update User stats
     const newTotalPoints = user.currentPoints + pointsToAdd + (freshlyUnlockedBadge ? 50 : 0);
     const newCheckinsCount = user.totalCheckins + 1;
     let newLevel = user.level;
     let newNextLevelPoints = user.nextLevelPoints;
     let newTitle = user.title;
 
-    if (newTotalPoints >= 350) {
+    if (newTotalPoints >= 400) {
       newLevel = 4;
-      newNextLevelPoints = 600;
-      newTitle = "Adana Muhtarı 👑";
-    } else if (newTotalPoints >= 200) {
+      newNextLevelPoints = 750;
+      newTitle = "Türkiye Gezgini 👑";
+    } else if (newTotalPoints >= 250) {
       newLevel = 3;
-      newNextLevelPoints = 350;
-      newTitle = "Kıdemli Kaşif 🌟";
+      newNextLevelPoints = 400;
+      newTitle = "Milli Şehir Kaşifi 🌟";
     }
 
     setUser({
@@ -279,8 +314,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newNotification: ActivityNotification = {
       id: `notif-${Date.now()}`,
       type: "checkin",
-      title: `${venue.name} için check-in tamamlandı!`,
-      message: `${mood} · +${pointsToAdd} puan kazandın.`,
+      title: `${venue.name} (${venue.city}) için check-in tamamlandı!`,
+      message: `${mood} · +${pointsToAdd} Keşif Puanı kazandın.`,
       time: "Şimdi",
       icon: "📍",
       read: false,
@@ -335,6 +370,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         markAllNotificationsAsRead,
         activeTab,
         setActiveTab,
+        selectedCity,
+        setSelectedCity,
+        isCityModalOpen,
+        setIsCityModalOpen,
       }}
     >
       {children}

@@ -13,7 +13,7 @@ export interface Venue {
   category: VenueCategory;
   subcategory: string;
   address: string;
-  district: "Seyhan" | "Çukurova" | "Yüreğir" | "Sarıçam";
+  district: string;
   city: string;
   latitude: number;
   longitude: number;

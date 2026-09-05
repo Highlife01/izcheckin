@@ -6,10 +6,11 @@ import { ProfileView } from "@/pages/ProfileView";
 import { VenueDetailModal } from "@/components/VenueDetailModal";
 import { CheckInModal } from "@/components/CheckInModal";
 import { BadgeUnlockedModal } from "@/components/BadgeUnlockedModal";
-import { Venue } from "@/types/venue";
+import { CitySelectModal } from "@/components/CitySelectModal";
+import { POPULAR_CITIES } from "@/data/venuesData";
 import { 
   Compass, Search, Bell, Users, MapPin, LocateFixed, 
-  Sparkles, Star, Flame, Check, Plus, Heart, ChevronRight, TrendingUp, Bookmark 
+  Sparkles, Star, Flame, Check, Plus, Heart, ChevronRight, TrendingUp, ChevronDown 
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -25,13 +26,15 @@ export default function Home({ initialTab = "home" }: { initialTab?: string }) {
     toggleFavorite, 
     isFavorite,
     activeTab,
-    setActiveTab 
+    setActiveTab,
+    selectedCity,
+    setSelectedCity,
+    setIsCityModalOpen 
   } = useApp();
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("Tümü");
 
-  // Sync initialTab if given
   React.useEffect(() => {
     if (initialTab && ["home", "discover", "notifications", "profile"].includes(initialTab)) {
       setActiveTab(initialTab);
@@ -49,16 +52,56 @@ export default function Home({ initialTab = "home" }: { initialTab?: string }) {
     { label: "Tatlı & Fırın", icon: "🍰" },
   ];
 
-  const filteredVenues = venues.filter((v) => {
+  const cityVenues = selectedCity === "Tüm Türkiye"
+    ? venues
+    : venues.filter((v) => v.city === selectedCity);
+
+  const filteredVenues = cityVenues.filter((v) => {
     const matchCat = category === "Tümü" || v.category === category;
     const matchSearch = !search || 
       v.name.toLowerCase().includes(search.toLowerCase()) || 
       v.district.toLowerCase().includes(search.toLowerCase()) ||
+      v.city.toLowerCase().includes(search.toLowerCase()) ||
       v.subcategory.toLowerCase().includes(search.toLowerCase());
     return matchCat && matchSearch;
   });
 
-  const trendingVenues = [...venues].sort((a, b) => b.activityScore - a.activityScore).slice(0, 4);
+  const getHeroSignal = () => {
+    switch (selectedCity) {
+      case "İstanbul":
+        return {
+          title: "Kadıköy & Beşiktaş'ta\nkahve ve sokak trafiği yükseliyor.",
+          count: "124 kişi son saatte çevrede",
+        };
+      case "Ankara":
+        return {
+          title: "Tunalı & Esat hattında\nakşam saatleri çok hareketli.",
+          count: "86 kişi son saatte çevrede",
+        };
+      case "İzmir":
+        return {
+          title: "Alsancak Kordon & Bostanlı'da\ngün batımı buluşmaları başladı.",
+          count: "94 kişi son saatte çevrede",
+        };
+      case "Gaziantep":
+        return {
+          title: "Tarihi Çarşı & Şahinbey'de\nlezzet durakları dolup taşıyor.",
+          count: "68 kişi son saatte çevrede",
+        };
+      case "Adana":
+        return {
+          title: "Ziyapaşa & Kazancılar'da\nakşam ziyafeti ve kahve nabzı yüksek.",
+          count: "58 kişi son saatte çevrede",
+        };
+      default:
+        return {
+          title: "Türkiye genelinde\ncanlı sosyalleşme noktaları parlıyor.",
+          count: "340+ kişi şu an keşifte",
+        };
+    }
+  };
+
+  const heroSignal = getHeroSignal();
 
   return (
     <div className="min-h-screen bg-[#f7f8f6] text-[#18342b] pb-28">
@@ -79,19 +122,21 @@ export default function Home({ initialTab = "home" }: { initialTab?: string }) {
             </button>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            {/* Şehir Seçici Buton */}
             <button
-              className="hidden items-center gap-2 rounded-full border border-[#d9e3db] bg-white px-3.5 py-2 text-xs font-bold text-[#527066] md:flex shadow-sm hover:border-[#b8cdbe] transition"
-              onClick={() => toast.success("Mevcut konumun: Seyhan, Adana (GPS Doğrulandı)")}
+              onClick={() => setIsCityModalOpen(true)}
+              className="flex items-center gap-1.5 rounded-full border border-[#d9e3db] bg-white px-3.5 py-2 text-xs font-bold text-[#3d5e50] shadow-sm hover:border-[#b8cdbe] transition active:scale-95"
             >
-              <LocateFixed size={14} className="text-[#7fa32c]" /> Seyhan, Adana{" "}
-              <ChevronRight size={13} />
+              <LocateFixed size={14} className="text-[#7fa32c]" />
+              <span>{selectedCity}</span>
+              <ChevronDown size={13} className="text-[#8ba096]" />
             </button>
 
             {/* Puan Rozeti */}
             <div 
               onClick={() => setActiveTab("profile")}
-              className="cursor-pointer flex items-center gap-1.5 rounded-full bg-[#eef8dd] px-3 py-1.5 border border-[#d9ecad] text-xs font-extrabold text-[#3a591e] shadow-sm hover:scale-105 transition"
+              className="cursor-pointer hidden sm:flex items-center gap-1.5 rounded-full bg-[#eef8dd] px-3 py-1.5 border border-[#d9ecad] text-xs font-extrabold text-[#3a591e] shadow-sm hover:scale-105 transition"
             >
               <Sparkles size={14} className="text-[#84a323]" />
               <span>{user.currentPoints} Puan</span>
@@ -118,18 +163,43 @@ export default function Home({ initialTab = "home" }: { initialTab?: string }) {
               <div>
                 <div className="mb-4 flex items-center gap-2 text-xs font-bold tracking-wide text-[#738e83]">
                   <span className="size-2.5 rounded-full bg-[#9ebb2a] animate-pulse" />{" "}
-                  Adana’da canlı şehir ritmi
+                  {selectedCity === "Tüm Türkiye" ? "Türkiye Canlı Şehir Radarı" : `${selectedCity} Canlı Şehir Radarı`}
                 </div>
                 <h1 className="max-w-xl font-display text-[40px] font-extrabold leading-[1.02] tracking-[-0.055em] text-[#18342b] sm:text-[56px]">
                   Şu an<br />
                   <span className="text-[#8e9e10]">neresi hareketli?</span>
                 </h1>
                 <p className="mt-4 max-w-md text-[15px] leading-relaxed text-[#657d72]">
-                  Adana'nın en sevilen lezzet ve kahve duraklarını keşfet, anlık yoğunluğu gör ve iz bırak.
+                  {selectedCity === "Tüm Türkiye"
+                    ? "Türkiye genelinde en sevilen kafe, lezzet ve buluşma duraklarını keşfet, anlık yoğunluğu takip et."
+                    : `${selectedCity} şehrindeki en popüler mekânları keşfet, canlı doluluk oranlarını gör ve iz bırak.`}
                 </p>
 
+                {/* Hızlı Şehir Seçim Hapları */}
+                <div className="mt-5 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
+                  {POPULAR_CITIES.slice(0, 6).map((city) => (
+                    <button
+                      key={city}
+                      onClick={() => setSelectedCity(city)}
+                      className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold transition ${
+                        selectedCity === city
+                          ? "bg-[#17362c] text-[#dfff62] shadow-sm"
+                          : "bg-white text-[#567266] border border-[#dbe5df] hover:border-[#b7c9bf]"
+                      }`}
+                    >
+                      {city}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setIsCityModalOpen(true)}
+                    className="shrink-0 rounded-full bg-[#eef4ef] px-3 py-1 text-xs font-bold text-[#4e6b5e] hover:bg-[#e2ece5]"
+                  >
+                    Daha Fazla +
+                  </button>
+                </div>
+
                 {/* Arama Barı */}
-                <div className="relative mt-6 max-w-xl">
+                <div className="relative mt-5 max-w-xl">
                   <Search
                     className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8fa39a]"
                     size={19}
@@ -137,7 +207,7 @@ export default function Home({ initialTab = "home" }: { initialTab?: string }) {
                   <Input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Mekân, kebapçı, 3. nesil kafe veya semt ara..."
+                    placeholder="Mekân adı, şehir (İstanbul, Ankara, İzmir), tatlı veya kahve ara..."
                     className="h-14 rounded-2xl border-[#dbe5de] bg-white pl-12 pr-4 text-[14px] shadow-[0_9px_30px_rgba(37,70,54,0.05)] placeholder:text-[#a2b2aa] focus-visible:border-[#9ead3b] focus-visible:ring-[#dfff62]"
                   />
                 </div>
@@ -152,12 +222,12 @@ export default function Home({ initialTab = "home" }: { initialTab?: string }) {
                       <Sparkles size={15} /> Günün Sinyali
                     </span>
                     <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-[#c4d7cb]">
-                      Bugün · Adana
+                      {selectedCity}
                     </span>
                   </div>
                   <div className="my-2">
-                    <p className="font-display text-2xl font-bold leading-tight">
-                      Ziyapaşa & Kazancılar'da<br />hafta sonu trafiği yükseliyor.
+                    <p className="font-display text-2xl font-bold leading-tight whitespace-pre-line">
+                      {heroSignal.title}
                     </p>
                     <div className="mt-4 flex items-center gap-3">
                       <div className="flex -space-x-2">
@@ -172,7 +242,7 @@ export default function Home({ initialTab = "home" }: { initialTab?: string }) {
                         </span>
                       </div>
                       <span className="text-xs text-[#c4d7cb]">
-                        Şu an 58 kişi çevrede check-in yaptı
+                        {heroSignal.count}
                       </span>
                     </div>
                   </div>
@@ -195,7 +265,7 @@ export default function Home({ initialTab = "home" }: { initialTab?: string }) {
                   onClick={() => setActiveTab("discover")}
                   className="text-xs font-bold text-[#7f941e] hover:underline"
                 >
-                  Tümünü Gör ({venues.length})
+                  Tümünü Gör ({cityVenues.length})
                 </button>
               </div>
 
@@ -225,189 +295,116 @@ export default function Home({ initialTab = "home" }: { initialTab?: string }) {
                     En Çok Konuşulanlar
                   </p>
                   <h2 className="mt-1 font-display text-[24px] font-extrabold tracking-[-0.04em]">
-                    Şu Anda Trend Mekânlar
+                    {selectedCity === "Tüm Türkiye" ? "Türkiye’de Trend Mekânlar" : `${selectedCity} Trend Mekânları`}
                   </h2>
                 </div>
               </div>
 
               <div className="grid gap-4 lg:grid-cols-2">
-                {filteredVenues.slice(0, 6).map((venue, index) => {
-                  const favorite = isFavorite(venue.id);
-                  return (
-                    <article
-                      key={venue.id}
-                      className="group rounded-[26px] border border-[#e4ece6] bg-white p-5 shadow-[0_8px_30px_rgba(34,64,48,0.035)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_36px_rgba(34,64,48,0.09)] flex flex-col justify-between"
-                    >
-                      <div className="flex gap-4">
-                        <div
-                          onClick={() => setSelectedVenue(venue)}
-                          className={`cursor-pointer relative flex h-[105px] w-[105px] shrink-0 items-end overflow-hidden rounded-[20px] p-2.5 ${
-                            ["bg-[#d8eee0]", "bg-[#f8dfc9]", "bg-[#e8ddfa]", "bg-[#d8e9f6]"][
-                              index % 4
-                            ]
-                          }`}
-                        >
+                {filteredVenues.length === 0 ? (
+                  <div className="col-span-2 rounded-[28px] bg-white p-8 text-center text-xs text-[#789286] border border-[#e3ece5]">
+                    Bu filtreye uygun mekân bulunamadı. Şehri veya kategoriyi değiştirebilirsin.
+                  </div>
+                ) : (
+                  filteredVenues.slice(0, 6).map((venue, index) => {
+                    const favorite = isFavorite(venue.id);
+                    return (
+                      <article
+                        key={venue.id}
+                        className="group rounded-[26px] border border-[#e4ece6] bg-white p-5 shadow-[0_8px_30px_rgba(34,64,48,0.035)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_36px_rgba(34,64,48,0.09)] flex flex-col justify-between"
+                      >
+                        <div className="flex gap-4">
                           <div
-                            className="absolute inset-0 opacity-40"
-                            style={{
-                              background:
-                                "radial-gradient(circle at 30% 20%, rgba(255,255,255,.9), transparent 40%), linear-gradient(145deg, transparent 30%, rgba(41,76,56,.18))",
-                            }}
-                          />
-                          <span className="relative rounded-full bg-white/90 px-2 py-0.5 text-[9px] font-extrabold text-[#355b46] backdrop-blur">
-                            {venue.category}
-                          </span>
-                        </div>
+                            onClick={() => setSelectedVenue(venue)}
+                            className={`cursor-pointer relative flex h-[105px] w-[105px] shrink-0 items-end overflow-hidden rounded-[20px] p-2.5 ${
+                              ["bg-[#d8eee0]", "bg-[#f8dfc9]", "bg-[#e8ddfa]", "bg-[#d8e9f6]"][
+                                index % 4
+                              ]
+                            }`}
+                          >
+                            <div
+                              className="absolute inset-0 opacity-40"
+                              style={{
+                                background:
+                                  "radial-gradient(circle at 30% 20%, rgba(255,255,255,.9), transparent 40%), linear-gradient(145deg, transparent 30%, rgba(41,76,56,.18))",
+                              }}
+                            />
+                            <span className="relative rounded-full bg-white/90 px-2 py-0.5 text-[9px] font-extrabold text-[#355b46] backdrop-blur">
+                              {venue.city}
+                            </span>
+                          </div>
 
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-start justify-between gap-2">
-                            <div 
-                              onClick={() => setSelectedVenue(venue)}
-                              className="cursor-pointer"
-                            >
-                              <h3 className="truncate font-display text-[17px] font-extrabold tracking-[-0.035em] text-[#234238] group-hover:text-[#527015] transition">
-                                {venue.name}
-                              </h3>
-                              <p className="mt-1 truncate text-xs text-[#899b92]">
-                                {venue.district} · {venue.address}
-                              </p>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <div 
+                                onClick={() => setSelectedVenue(venue)}
+                                className="cursor-pointer"
+                              >
+                                <h3 className="truncate font-display text-[17px] font-extrabold tracking-[-0.035em] text-[#234238] group-hover:text-[#527015] transition">
+                                  {venue.name}
+                                </h3>
+                                <p className="mt-1 truncate text-xs text-[#899b92]">
+                                  {venue.district}, {venue.city} · {venue.subcategory}
+                                </p>
+                              </div>
+
+                              <button
+                                onClick={() => toggleFavorite(venue.id)}
+                                aria-label="Favori"
+                                className={`p-1 transition ${
+                                  favorite ? "text-red-500" : "text-[#b7c6bd] hover:text-[#8c9f22]"
+                                }`}
+                              >
+                                <Heart size={17} fill={favorite ? "currentColor" : "none"} />
+                              </button>
                             </div>
 
-                            <button
-                              onClick={() => toggleFavorite(venue.id)}
-                              aria-label="Favori"
-                              className={`p-1 transition ${
-                                favorite ? "text-red-500" : "text-[#b7c6bd] hover:text-[#8c9f22]"
-                              }`}
-                            >
-                              <Heart size={17} fill={favorite ? "currentColor" : "none"} />
-                            </button>
-                          </div>
-
-                          <div className="mt-3 flex items-center gap-3 text-xs">
-                            <span className="flex items-center gap-1 font-extrabold text-[#4c655b]">
-                              <Star size={13} fill="#edb94c" className="text-[#edb94c]" />{" "}
-                              {venue.rating}
-                            </span>
-                            <span className="text-[#a1b0a8]">{index * 350 + 200} m</span>
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                                venue.activityScore >= 85
-                                  ? "text-[#e05b1c] bg-[#fff1e7]"
-                                  : "text-[#16805c] bg-[#e9f8f0]"
-                              }`}
-                            >
-                              <Flame size={10} className="mr-0.5 inline" /> {venue.activityScore}% Canlı
-                            </span>
+                            <div className="mt-3 flex items-center gap-3 text-xs">
+                              <span className="flex items-center gap-1 font-extrabold text-[#4c655b]">
+                                <Star size={13} fill="#edb94c" className="text-[#edb94c]" />{" "}
+                                {venue.rating}
+                              </span>
+                              <span className="text-[#a1b0a8]">{venue.priceRange}</span>
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                  venue.activityScore >= 85
+                                    ? "text-[#e05b1c] bg-[#fff1e7]"
+                                    : "text-[#16805c] bg-[#e9f8f0]"
+                                }`}
+                              >
+                                <Flame size={10} className="mr-0.5 inline" /> {venue.activityScore}% Canlı
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="mt-4 flex items-center justify-between border-t border-[#edf1ed] pt-3">
-                        <span className="flex items-center gap-1.5 text-[11px] font-semibold text-[#7b9187]">
-                          <Users size={13} className="text-[#8aa224]" /> {venue.checkinCount} toplam check-in
-                        </span>
+                        <div className="mt-4 flex items-center justify-between border-t border-[#edf1ed] pt-3">
+                          <span className="flex items-center gap-1.5 text-[11px] font-semibold text-[#7b9187]">
+                            <Users size={13} className="text-[#8aa224]" /> {venue.checkinCount} toplam check-in
+                          </span>
 
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setSelectedVenue(venue)}
-                            className="h-8 rounded-full text-xs font-bold text-[#3b594b] hover:bg-[#edf5f0]"
-                          >
-                            İncele
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => setCheckInVenue(venue)}
-                            className="h-8 rounded-full bg-[#17362c] px-3.5 text-[11px] font-extrabold text-[#dfff62] hover:bg-[#294d3f] shadow-sm"
-                          >
-                            <Check size={13} className="mr-1" /> Check-in
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setSelectedVenue(venue)}
+                              className="h-8 rounded-full text-xs font-bold text-[#3b594b] hover:bg-[#edf5f0]"
+                            >
+                              İncele
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => setCheckInVenue(venue)}
+                              className="h-8 rounded-full bg-[#17362c] px-3.5 text-[11px] font-extrabold text-[#dfff62] hover:bg-[#294d3f] shadow-sm"
+                            >
+                              <Check size={13} className="mr-1" /> Check-in
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            </section>
-
-            {/* Sosyal Nabız & Bu Hafta En Çok Yükselen */}
-            <section className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
-              <div className="rounded-[28px] bg-white p-6 shadow-[0_10px_35px_rgba(34,64,48,0.04)] border border-[#e4ede6]">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#a0b0a8]">
-                      Sosyal Nabız
-                    </p>
-                    <h2 className="mt-1 font-display text-xl font-extrabold tracking-[-0.04em]">
-                      Adana'da Şu Anda Neredeler?
-                    </h2>
-                  </div>
-                  <button
-                    onClick={() => setActiveTab("notifications")}
-                    className="text-xs font-bold text-[#8a9b20] hover:underline"
-                  >
-                    Tüm Akış
-                  </button>
-                </div>
-
-                <div className="mt-5 space-y-3.5">
-                  <div className="flex items-center gap-3">
-                    <span className="flex size-10 items-center justify-center rounded-full text-xs font-bold bg-[#ffd8c8] text-[#714432]">
-                      CK
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-[#4c655b]">
-                        <strong className="font-bold text-[#29493b]">Cebrail Kara</strong> Kebapçı Mesut'ta check-in yaptı 🥩
-                      </p>
-                      <p className="mt-0.5 text-[11px] text-[#a0b0a8]">25 dk önce · Seyhan</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="flex size-10 items-center justify-center rounded-full text-xs font-bold bg-[#d9cdfc] text-[#4d3a77]">
-                      ED
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-[#4c655b]">
-                        <strong className="font-bold text-[#29493b]">Elif Demir</strong> Ziyapaşa Kahve'de fotoğraf paylaştı ☕
-                      </p>
-                      <p className="mt-0.5 text-[11px] text-[#a0b0a8]">42 dk önce · Ziyapaşa</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-[28px] bg-[#eaf7d5] p-6 border border-[#d6ecb5] flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex size-10 items-center justify-center rounded-2xl bg-[#dfff62] text-[#546404]">
-                      <TrendingUp size={20} />
-                    </div>
-                    <span className="rounded-full bg-white/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#65761a]">
-                      Haftanın Yıldızı
-                    </span>
-                  </div>
-                  <p className="mt-4 text-xs font-bold uppercase tracking-[0.15em] text-[#778844]">
-                    En Çok Yükselen Mekân
-                  </p>
-                  <h3 className="mt-1 font-display text-[22px] font-extrabold tracking-tight text-[#223b1f]">
-                    Arka Sokak Gastro Pub
-                  </h3>
-                  <p className="text-xs text-[#526a45] mt-1">
-                    Bu hafta sonu gece check-in trafiği %45 arttı!
-                  </p>
-                </div>
-
-                <Button
-                  onClick={() => {
-                    const arkaSokak = venues.find((v) => v.slug === "arka-sokak-pub");
-                    if (arkaSokak) setSelectedVenue(arkaSokak);
-                  }}
-                  className="mt-5 rounded-2xl bg-[#17362c] text-xs font-extrabold text-[#dfff62] hover:bg-[#254b3d]"
-                >
-                  Mekânı İncele
-                </Button>
+                      </article>
+                    );
+                  })
+                )}
               </div>
             </section>
           </div>
@@ -446,7 +443,9 @@ export default function Home({ initialTab = "home" }: { initialTab?: string }) {
           {/* Orta Büyük Check-in Butonu */}
           <button
             onClick={() => {
-              if (venues.length > 0) {
+              if (cityVenues.length > 0) {
+                setCheckInVenue(cityVenues[0]);
+              } else if (venues.length > 0) {
                 setCheckInVenue(venues[0]);
               }
             }}
@@ -491,6 +490,7 @@ export default function Home({ initialTab = "home" }: { initialTab?: string }) {
       <VenueDetailModal />
       <CheckInModal />
       <BadgeUnlockedModal />
+      <CitySelectModal />
     </div>
   );
 }
