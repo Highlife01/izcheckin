@@ -138,6 +138,13 @@ export const DiscoverView: React.FC = () => {
 
       {/* Şehirler Yatay Kaydırma */}
       <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+        <button
+          onClick={() => setIsCityModalOpen(true)}
+          className="shrink-0 flex items-center gap-1 rounded-full bg-[#eef6db] px-3.5 py-1.5 text-xs font-extrabold text-[#385517] border border-[#cfec9e] hover:bg-[#e4f2cb] transition"
+        >
+          <span>🇹🇷 81 İl Seç</span>
+          <ChevronDown size={12} />
+        </button>
         {POPULAR_CITIES.map((city) => {
           const isCurrent = selectedCity === city;
           return (

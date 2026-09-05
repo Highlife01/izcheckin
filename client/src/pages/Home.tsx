@@ -176,14 +176,21 @@ export default function Home({ initialTab = "home" }: { initialTab?: string }) {
                 </p>
 
                 {/* Hızlı Şehir Seçim Hapları */}
-                <div className="mt-5 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
-                  {POPULAR_CITIES.slice(0, 6).map((city) => (
+                <div className="mt-5 flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
+                  <button
+                    onClick={() => setIsCityModalOpen(true)}
+                    className="shrink-0 flex items-center gap-1 rounded-full bg-[#17362c] text-[#dfff62] px-3.5 py-1 text-xs font-extrabold shadow-sm hover:bg-[#274f40] transition"
+                  >
+                    <span>🇹🇷 81 İl ({selectedCity})</span>
+                    <ChevronDown size={12} />
+                  </button>
+                  {POPULAR_CITIES.slice(0, 7).map((city) => (
                     <button
                       key={city}
                       onClick={() => setSelectedCity(city)}
                       className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold transition ${
                         selectedCity === city
-                          ? "bg-[#17362c] text-[#dfff62] shadow-sm"
+                          ? "bg-[#dfff62] text-[#1c3829] font-extrabold shadow-sm"
                           : "bg-white text-[#567266] border border-[#dbe5df] hover:border-[#b7c9bf]"
                       }`}
                     >
@@ -194,7 +201,7 @@ export default function Home({ initialTab = "home" }: { initialTab?: string }) {
                     onClick={() => setIsCityModalOpen(true)}
                     className="shrink-0 rounded-full bg-[#eef4ef] px-3 py-1 text-xs font-bold text-[#4e6b5e] hover:bg-[#e2ece5]"
                   >
-                    Daha Fazla +
+                    Tüm 81 İl...
                   </button>
                 </div>
 
