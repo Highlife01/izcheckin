@@ -116,10 +116,43 @@ interface MapViewProps {
   onMapReady?: (map: google.maps.Map) => void;
 }
 
+export function createVenueMarkerContent(venue: {
+  name: string;
+  category: string;
+  activityScore: number;
+}): HTMLElement {
+  const container = document.createElement("div");
+  container.className =
+    "iz-marker group cursor-pointer flex items-center gap-1.5 rounded-full px-2.5 py-1.5 bg-white/95 border-2 shadow-[0_6px_20px_rgba(23,54,44,0.22)] backdrop-blur-md transition-all duration-200 hover:scale-110 active:scale-95";
+
+  // Renk belirleme
+  const isTrend = venue.activityScore >= 85;
+  const borderColor = isTrend ? "#f97316" : "#2e7d32";
+  container.style.borderColor = borderColor;
+
+  // İkon
+  let icon = "📍";
+  if (venue.category.includes("Kahve")) icon = "☕";
+  else if (venue.category.includes("Kebap")) icon = "🥩";
+  else if (venue.category.includes("Bar")) icon = "🍸";
+  else if (venue.category.includes("Tatlı")) icon = "🍰";
+  else if (venue.category.includes("Restoran")) icon = "🍽️";
+
+  container.innerHTML = `
+    <span class="text-xs leading-none">${icon}</span>
+    <span class="text-[11px] font-extrabold text-[#17362c] max-w-[110px] truncate">${venue.name}</span>
+    <span class="rounded-full px-1.5 py-0.2 text-[9px] font-extrabold ${
+      isTrend ? "bg-[#ffebe0] text-[#e05b1c]" : "bg-[#e8f7ee] text-[#197a4a]"
+    }">%${venue.activityScore}</span>
+  `;
+
+  return container;
+}
+
 export function MapView({
   className,
-  initialCenter = { lat: 37.7749, lng: -122.4194 },
-  initialZoom = 12,
+  initialCenter = { lat: 39.93, lng: 32.85 }, // Ankara / Türkiye merkezi
+  initialZoom = 6,
   onMapReady,
 }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -134,10 +167,10 @@ export function MapView({
     map.current = new window.google.maps.Map(mapContainer.current, {
       zoom: initialZoom,
       center: initialCenter,
-      mapTypeControl: true,
+      mapTypeControl: false,
       fullscreenControl: true,
       zoomControl: true,
-      streetViewControl: true,
+      streetViewControl: false,
       mapId: "DEMO_MAP_ID",
     });
     if (onMapReady) {
@@ -153,3 +186,4 @@ export function MapView({
     <div ref={mapContainer} className={cn("w-full h-[500px]", className)} />
   );
 }
+

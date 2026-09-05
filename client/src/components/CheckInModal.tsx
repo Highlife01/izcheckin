@@ -3,7 +3,8 @@ import { useApp } from "@/contexts/AppContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { MapPin, Sparkles, Check, Flame, Award } from "lucide-react";
+import { distanceInMeters, formatDistance, isCheckInAllowed } from "@/lib/geo";
+import { MapPin, Sparkles, Check, Flame, Award, Navigation, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
 const MOOD_OPTIONS = [
@@ -20,8 +21,52 @@ export const CheckInModal: React.FC = () => {
   const [selectedMood, setSelectedMood] = useState<string>("☕ Kahve Molası");
   const [note, setNote] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
+  const [gpsStatus, setGpsStatus] = useState<"loading" | "verified" | "far" | "denied">("loading");
+
+  React.useEffect(() => {
+    if (!checkInVenue) return;
+    setGpsStatus("loading");
+
+    if (!navigator.geolocation) {
+      setGpsStatus("verified");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const uLat = pos.coords.latitude;
+        const uLng = pos.coords.longitude;
+        const acc = pos.coords.accuracy || 25;
+        setUserCoords({ lat: uLat, lng: uLng, accuracy: acc });
+
+        const dist = distanceInMeters(
+          { latitude: uLat, longitude: uLng },
+          { latitude: checkInVenue.latitude, longitude: checkInVenue.longitude }
+        );
+
+        const check = isCheckInAllowed(dist, acc);
+        if (check.allowed) {
+          setGpsStatus("verified");
+        } else {
+          setGpsStatus("far");
+        }
+      },
+      () => {
+        setGpsStatus("denied");
+      },
+      { timeout: 6000, enableHighAccuracy: true }
+    );
+  }, [checkInVenue]);
 
   if (!checkInVenue) return null;
+
+  const currentDist = userCoords
+    ? distanceInMeters(
+        { latitude: userCoords.lat, longitude: userCoords.lng },
+        { latitude: checkInVenue.latitude, longitude: checkInVenue.longitude }
+      )
+    : null;
 
   const handleSubmit = () => {
     setIsSubmitting(true);
@@ -60,11 +105,40 @@ export const CheckInModal: React.FC = () => {
               <span className="rounded-full bg-[#17362c] px-2.5 py-1 text-[10px] font-bold text-[#dfff62]">
                 {checkInVenue.category}
               </span>
-              <span className="text-[#557064] font-medium">{checkInVenue.district}, Adana</span>
+              <span className="text-[#557064] font-medium">{checkInVenue.district}, {checkInVenue.city}</span>
             </div>
             <span className="flex items-center gap-1 font-bold text-[#e16a2b]">
               <Flame size={13} fill="currentColor" /> {checkInVenue.activityScore}% Canlı
             </span>
+          </div>
+
+          {/* GPS Doğrulama ve Mesafe Rozeti */}
+          <div className="rounded-2xl border border-[#d6e5dc] bg-[#f8faf8] p-3 text-xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold text-[#234235]">
+                <ShieldCheck size={16} className={gpsStatus === "verified" ? "text-[#16a34a]" : "text-[#d97706]"} />
+                <span>GPS Konum Kontrolü</span>
+              </div>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
+                gpsStatus === "verified" 
+                  ? "bg-[#e8f7ee] text-[#15803d]" 
+                  : gpsStatus === "loading"
+                  ? "bg-[#f1f5f9] text-[#64748b]"
+                  : "bg-[#fff8df] text-[#b45309]"
+              }`}>
+                {gpsStatus === "verified" && "✓ Doğrulandı (<400m)"}
+                {gpsStatus === "loading" && "Konum Alınıyor..."}
+                {gpsStatus === "far" && "Farklı Konum"}
+                {gpsStatus === "denied" && "GPS Kapalı"}
+              </span>
+            </div>
+            {currentDist !== null && (
+              <p className="text-[11px] text-[#6b857a] mt-1.5 flex items-center gap-1">
+                <Navigation size={12} className="text-[#7ea321]" />
+                Mekâna olan kuş uçuşu mesafe: <strong>{formatDistance(currentDist)}</strong>
+                {gpsStatus === "far" && " (Simülasyon/Keşif modunda check-in yapılabilir)"}
+              </p>
+            )}
           </div>
 
           {/* Ruh Hali Seçimi */}

@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { useApp } from "@/contexts/AppContext";
 import { VenueCategory } from "@/types/venue";
-import { POPULAR_CITIES } from "@/data/venuesData";
+import { POPULAR_CITIES, TURKEY_PROVINCES } from "@/data/venuesData";
+import { MapView, createVenueMarkerContent } from "@/components/Map";
 import { 
   Search, MapPin, Star, Flame, Users, Navigation, 
   Map as MapIcon, Filter, Check, Heart, ChevronDown 
@@ -35,6 +36,8 @@ export const DiscoverView: React.FC = () => {
   const [selectedDistrict, setSelectedDistrict] = useState("Tümü");
   const [quickFilter, setQuickFilter] = useState<"all" | "trend" | "quiet" | "top" | "favs">("all");
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
+  const mapRef = React.useRef<google.maps.Map | null>(null);
+  const markersRef = React.useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
 
   // Mevcut seçili şehre göre ilçeleri dinamik çıkar
   const availableDistricts = useMemo(() => {
@@ -81,6 +84,56 @@ export const DiscoverView: React.FC = () => {
       return true;
     });
   }, [venues, search, selectedCity, selectedCategory, selectedDistrict, quickFilter, isFavorite]);
+
+  // Harita Marker Yönetimi ve Şehir Odaklanması
+  React.useEffect(() => {
+    const map = mapRef.current;
+    if (!map || viewMode !== "map" || !window.google?.maps?.marker?.AdvancedMarkerElement) return;
+
+    // Eski marker'ları temizle
+    markersRef.current.forEach((m) => {
+      m.map = null;
+    });
+    markersRef.current = [];
+
+    // Seçili il merkezine odaklan
+    if (selectedCity !== "Tüm Türkiye") {
+      const province = TURKEY_PROVINCES.find(
+        (p) => p.name.toLowerCase() === selectedCity.toLowerCase()
+      );
+      if (province) {
+        map.panTo(province.centerCoords);
+        map.setZoom(13);
+      }
+    } else {
+      map.panTo({ lat: 39.0, lng: 35.2 }); // Türkiye merkezi
+      map.setZoom(6);
+    }
+
+    // Yeni HTML marker'ları ekle
+    markersRef.current = filteredVenues.map((v) => {
+      const content = createVenueMarkerContent(v);
+      const marker = new window.google.maps.marker.AdvancedMarkerElement({
+        map,
+        position: { lat: v.latitude, lng: v.longitude },
+        title: `${v.name} (${v.city})`,
+        content,
+      });
+
+      marker.addListener("click", () => {
+        setSelectedVenue(v);
+      });
+
+      return marker;
+    });
+
+    return () => {
+      markersRef.current.forEach((m) => {
+        m.map = null;
+      });
+      markersRef.current = [];
+    };
+  }, [filteredVenues, selectedCity, viewMode, setSelectedVenue]);
 
   return (
     <div className="space-y-6">
@@ -243,26 +296,25 @@ export const DiscoverView: React.FC = () => {
 
       {/* Mekân Listesi / Harita */}
       {viewMode === "map" ? (
-        <div className="relative overflow-hidden rounded-[28px] border border-[#dce8dd] bg-[#eef4ee] p-6 shadow-[0_10px_35px_rgba(23,54,44,0.05)] text-center min-h-[350px] flex flex-col items-center justify-center">
-          <div className="flex size-14 items-center justify-center rounded-2xl bg-[#17362c] text-[#dfff62] mb-3">
-            <MapIcon size={28} />
+        <div className="relative overflow-hidden rounded-[28px] border border-[#dce8dd] bg-[#eef4ee] shadow-[0_10px_35px_rgba(23,54,44,0.05)]">
+          <MapView
+            className="h-[480px] w-full"
+            initialCenter={{ lat: 39.0, lng: 35.2 }}
+            initialZoom={6}
+            onMapReady={(map) => {
+              mapRef.current = map;
+            }}
+          />
+          <div className="pointer-events-none absolute left-4 top-4 rounded-full bg-white/95 px-3.5 py-1.5 text-xs font-extrabold text-[#17362c] shadow-sm backdrop-blur-md">
+            📍 {selectedCity} · {filteredVenues.length} Mekân
           </div>
-          <h3 className="font-display text-xl font-bold text-[#17362c]">
-            {selectedCity} Canlı Haritası
-          </h3>
-          <p className="text-xs text-[#637d72] max-w-sm mt-1 mb-4">
-            Filtrelenmiş {filteredVenues.length} popüler mekân harita üzerinde işaretlendi.
-          </p>
-          <div className="flex flex-wrap justify-center gap-2 max-w-lg">
-            {filteredVenues.slice(0, 10).map((v) => (
-              <button
-                key={v.id}
-                onClick={() => setSelectedVenue(v)}
-                className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-[#1c392f] shadow-sm hover:bg-[#dfff62] transition"
-              >
-                📍 {v.name} ({v.city}) · %{v.activityScore}
-              </button>
-            ))}
+          <div className="pointer-events-none absolute bottom-4 left-4 rounded-2xl bg-white/95 p-3 shadow-md backdrop-blur-md max-w-xs">
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#7ea321]">
+              Canlı Harita
+            </p>
+            <p className="text-xs font-semibold text-[#3d5e4f] mt-0.5">
+              Marker'a dokunarak mekân detayını ve check-in ekranını açabilirsiniz.
+            </p>
           </div>
         </div>
       ) : (

@@ -2,9 +2,10 @@ import React from "react";
 import { useApp } from "@/contexts/AppContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { distanceInMeters, formatDistance } from "@/lib/geo";
 import { 
   MapPin, Star, Heart, Check, Clock, Phone, Instagram, 
-  Flame, Navigation, Users, Sparkles, Share2 
+  Flame, Navigation, Users, Sparkles, Share2, Compass 
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -16,6 +17,23 @@ export const VenueDetailModal: React.FC = () => {
     toggleFavorite, 
     isFavorite 
   } = useApp();
+
+  const [userDist, setUserDist] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    if (!selectedVenue || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const d = distanceInMeters(
+          { latitude: pos.coords.latitude, longitude: pos.coords.longitude },
+          { latitude: selectedVenue.latitude, longitude: selectedVenue.longitude }
+        );
+        setUserDist(d);
+      },
+      () => {},
+      { timeout: 5000 }
+    );
+  }, [selectedVenue]);
 
   if (!selectedVenue) return null;
 
@@ -76,9 +94,16 @@ export const VenueDetailModal: React.FC = () => {
             <h2 className="font-display text-2xl font-extrabold tracking-tight leading-tight">
               {selectedVenue.name}
             </h2>
-            <p className="text-xs text-white/80 mt-1 flex items-center gap-1.5">
-              <MapPin size={13} className="text-[#dfff62]" /> {selectedVenue.address}
-            </p>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-white/80 mt-1">
+              <span className="flex items-center gap-1">
+                <MapPin size={13} className="text-[#dfff62]" /> {selectedVenue.district}, {selectedVenue.city}
+              </span>
+              {userDist !== null && (
+                <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-extrabold text-[#dfff62] backdrop-blur-sm">
+                  📍 {formatDistance(userDist)} mesafedesiniz
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Arka plan dekorasyon halkaları */}
