@@ -1,0 +1,17 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@custom-variant dark (&:is(.dark *));
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px); --radius-md: calc(var(--radius) - 2px); --radius-lg: var(--radius); --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background); --color-foreground: var(--foreground); --color-card: var(--card); --color-card-foreground: var(--card-foreground); --color-popover: var(--popover); --color-popover-foreground: var(--popover-foreground); --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground); --color-secondary: var(--secondary); --color-secondary-foreground: var(--secondary-foreground); --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground); --color-accent: var(--accent); --color-accent-foreground: var(--accent-foreground); --color-destructive: var(--destructive); --color-destructive-foreground: var(--destructive-foreground); --color-border: var(--border); --color-input: var(--input); --color-ring: var(--ring); --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif; --font-display: "Space Grotesk", "DM Sans", ui-sans-serif, sans-serif;
+}
+:root { --radius: 0.8rem; --background: #f7f8f6; --foreground: #18342b; --card: #ffffff; --card-foreground: #18342b; --popover: #ffffff; --popover-foreground: #18342b; --primary: #17362c; --primary-foreground: #f7fff0; --secondary: #edf3ee; --secondary-foreground: #355448; --muted: #edf3ee; --muted-foreground: #70867c; --accent: #dfff62; --accent-foreground: #294226; --destructive: #c94f50; --destructive-foreground: #ffffff; --border: #dfe8e2; --input: #dfe8e2; --ring: #c7e63c; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { @apply bg-background text-foreground font-sans antialiased; margin: 0; }
+button, a, input { -webkit-tap-highlight-color: transparent; }
+button:active { transform: scale(0.98); }
+.font-display { font-family: var(--font-display); }
+@layer base { * { @apply border-border outline-ring/50; } button:not(:disabled), [role="button"]:not([aria-disabled="true"]), a[href], select:not(:disabled) { @apply cursor-pointer; } }
+@layer components { .container { width: 100%; margin-inline: auto; padding-inline: 1rem; } .flex { min-height: 0; min-width: 0; } @media (min-width: 640px) { .container { padding-inline: 1.5rem; } } @media (min-width: 1024px) { .container { padding-inline: 2rem; max-width: 1280px; } } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; } }

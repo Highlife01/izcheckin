@@ -1,0 +1,11 @@
+{
+  "name": "mekân. — Sosyal Mekân Keşfi",
+  "short_name": "mekân.",
+  "description": "Yakınındaki mekânları keşfet, canlı yoğunluğu gör ve arkadaşlarınla check-in yap.",
+  "lang": "tr-TR",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f8f6",
+  "theme_color": "#17362c",
+  "icons": []
+}

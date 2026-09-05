@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "adanahizlisatis"
+  },
+  "targets": {
+    "adanahizlisatis": {
+      "hosting": {
+        "izzzzz": [
+          "izzzzz"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
