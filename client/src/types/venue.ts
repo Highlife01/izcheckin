@@ -29,6 +29,38 @@ export interface Venue {
   phone?: string;
   instagram?: string;
   busynessHours?: number[]; // 24 saatlik yoğunluk oranları (0-100)
+  mayor?: {
+    name: string;
+    avatar: string;
+    checkinCount: number;
+    since: string;
+  };
+  reviews?: Review[];
+}
+
+export interface Review {
+  id: string;
+  venueId: number;
+  userName: string;
+  userAvatar: string;
+  rating: number;
+  text: string;
+  photoUrl?: string;
+  timestamp: string;
+  likesCount: number;
+}
+
+export interface LeaderboardUser {
+  rank: number;
+  name: string;
+  avatarText: string;
+  avatarBg: string;
+  city: string;
+  points: number;
+  checkins: number;
+  badgesCount: number;
+  title: string;
+  isCurrentUser?: boolean;
 }
 
 export interface CheckInRecord {

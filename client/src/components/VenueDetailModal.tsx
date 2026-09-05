@@ -15,10 +15,17 @@ export const VenueDetailModal: React.FC = () => {
     setSelectedVenue, 
     setCheckInVenue, 
     toggleFavorite, 
-    isFavorite 
+    isFavorite,
+    sendCheer,
+    reviews,
+    addReview,
   } = useApp();
 
   const [userDist, setUserDist] = React.useState<number | null>(null);
+  const [showReviewForm, setShowReviewForm] = React.useState(false);
+  const [newRating, setNewRating] = React.useState(5);
+  const [newComment, setNewComment] = React.useState("");
+  const [newPhoto, setNewPhoto] = React.useState("");
 
   React.useEffect(() => {
     if (!selectedVenue || !navigator.geolocation) return;
@@ -38,6 +45,18 @@ export const VenueDetailModal: React.FC = () => {
   if (!selectedVenue) return null;
 
   const favorite = isFavorite(selectedVenue.id);
+  const venueReviews = reviews[selectedVenue.id] || [];
+
+  const handleSubmitReview = () => {
+    if (!newComment.trim()) {
+      toast.error("Lütfen bir yorum veya değerlendirme yazın.");
+      return;
+    }
+    addReview(selectedVenue.id, newRating, newComment.trim(), newPhoto || undefined);
+    setNewComment("");
+    setNewPhoto("");
+    setShowReviewForm(false);
+  };
 
   const handleOpenMaps = () => {
     const url = `https://www.google.com/maps/search/?api=1&query=${selectedVenue.latitude},${selectedVenue.longitude}`;
@@ -224,6 +243,165 @@ export const VenueDetailModal: React.FC = () => {
                 <span>Instagram: <strong className="text-[#17362c]">{selectedVenue.instagram}</strong></span>
               </div>
             )}
+          </div>
+
+          {/* Mekân Muhtarı (Mayor) Kartı */}
+          <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="size-11 rounded-2xl bg-gradient-to-tr from-amber-400 to-yellow-300 text-amber-950 font-black text-sm flex items-center justify-center border-2 border-amber-300 shadow-md">
+                  {selectedVenue.mayor ? selectedVenue.mayor.avatar : "👑"}
+                </div>
+                <div className="absolute -top-1.5 -right-1.5 text-xs">
+                  👑
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-black text-[#17362c]">
+                    {selectedVenue.mayor ? selectedVenue.mayor.name : "Henüz Muhtar Yok"}
+                  </span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-400 text-amber-950 font-bold uppercase tracking-wider">
+                    Mekân Muhtarı
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#557365] mt-0.5">
+                  {selectedVenue.mayor
+                    ? `${selectedVenue.mayor.checkinCount} check-in ile mekânın lideri (${selectedVenue.mayor.since})`
+                    : "Bu mekânda 2 veya daha fazla check-in yaparak muhtarlık tacını sen kap!"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Jest Yap / Selam Gönder (Cheers) */}
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#8b9e95] mb-2.5 flex items-center gap-1.5">
+              <Sparkles size={14} className="text-amber-500" /> Masaya Jest Yap & Selam Gönder
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { type: "Kahve Ismarla", icon: "☕", color: "hover:border-amber-500 hover:bg-amber-50" },
+                { type: "Selam Gönder", icon: "👋", color: "hover:border-emerald-500 hover:bg-emerald-50" },
+                { type: "Kadeh Kaldır", icon: "🥂", color: "hover:border-purple-500 hover:bg-purple-50" },
+                { type: "İkram Gönder", icon: "🍰", color: "hover:border-pink-500 hover:bg-pink-50" },
+              ].map((cheer) => (
+                <button
+                  key={cheer.type}
+                  onClick={() => sendCheer(selectedVenue, cheer.type)}
+                  className={`flex flex-col items-center justify-center p-2.5 rounded-xl border border-[#dbe6df] bg-[#f8faf8] transition-all active:scale-95 ${cheer.color}`}
+                >
+                  <span className="text-lg mb-0.5">{cheer.icon}</span>
+                  <span className="text-[11px] font-bold text-[#27483a]">{cheer.type}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Topluluk Değerlendirmeleri ve Yorumlar */}
+          <div className="space-y-3 pt-1">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#8b9e95]">
+                Topluluk Yorumları ({venueReviews.length})
+              </h3>
+              <button
+                onClick={() => setShowReviewForm(!showReviewForm)}
+                className="text-xs font-bold text-[#2a5948] hover:text-[#17362c] underline"
+              >
+                {showReviewForm ? "Formu Kapat" : "+ Değerlendirme Yaz"}
+              </button>
+            </div>
+
+            {/* Yeni Yorum Formu */}
+            {showReviewForm && (
+              <div className="p-4 rounded-2xl border border-[#c5d8cd] bg-[#f4f7f4] space-y-3 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#17362c]">Puanınız:</span>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setNewRating(star)}
+                        className="p-1 hover:scale-110 transition"
+                      >
+                        <Star
+                          size={18}
+                          className={star <= newRating ? "text-amber-500 fill-amber-500" : "text-gray-300"}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <textarea
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Mekânın ortamı, lezzetleri ve servisi hakkında ne düşünüyorsunuz?..."
+                  rows={3}
+                  className="w-full text-xs p-3 rounded-xl border border-[#d0ded5] bg-white text-[#17362c] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#17362c]"
+                />
+
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewPhoto(newPhoto ? "" : "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=600&auto=format&fit=crop&q=80");
+                      toast.info(newPhoto ? "Fotoğraf kaldırıldı" : "Örnek anlık fotoğraf eklendi 📸");
+                    }}
+                    className={`text-xs px-3 py-1.5 rounded-lg border font-semibold transition ${
+                      newPhoto ? "border-[#17362c] bg-[#17362c] text-[#dfff62]" : "border-[#c5d8cd] bg-white text-[#385648]"
+                    }`}
+                  >
+                    📸 {newPhoto ? "Fotoğraf Eklendi ✓" : "Fotoğraf Ekle"}
+                  </button>
+
+                  <Button
+                    type="button"
+                    onClick={handleSubmitReview}
+                    className="bg-[#17362c] hover:bg-[#27483a] text-[#dfff62] text-xs font-bold rounded-xl h-8 px-4"
+                  >
+                    Paylaş (+15 P)
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Yorumlar Listesi */}
+            <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+              {venueReviews.length === 0 ? (
+                <p className="text-xs text-[#869990] py-3 text-center">
+                  Henüz yorum yazılmamış. İlk değerlendirmeyi sen yap!
+                </p>
+              ) : (
+                venueReviews.map((rev) => (
+                  <div key={rev.id} className="p-3 rounded-xl bg-[#f8faf8] border border-[#e4ede7] text-xs space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="size-6 rounded-lg bg-[#deff55] text-[#17362c] font-bold text-[10px] flex items-center justify-center">
+                          {rev.userAvatar}
+                        </div>
+                        <span className="font-bold text-[#17362c]">{rev.userName}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="flex text-amber-500">
+                          {Array.from({ length: rev.rating }).map((_, i) => (
+                            <Star key={i} size={11} fill="currentColor" />
+                          ))}
+                        </div>
+                        <span className="text-[10px] text-[#869990] ml-1">{rev.timestamp}</span>
+                      </div>
+                    </div>
+                    <p className="text-[#385648] text-xs leading-relaxed">{rev.text}</p>
+                    {rev.photoUrl && (
+                      <div className="mt-1.5 rounded-lg overflow-hidden border border-[#dbe6df] max-h-32">
+                        <img src={rev.photoUrl} alt="Ziyaretçi fotoğrafı" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
           {/* Eylemler */}

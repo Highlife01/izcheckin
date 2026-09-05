@@ -20,6 +20,7 @@ export const CheckInModal: React.FC = () => {
   const { checkInVenue, setCheckInVenue, performCheckIn } = useApp();
   const [selectedMood, setSelectedMood] = useState<string>("☕ Kahve Molası");
   const [note, setNote] = useState<string>("");
+  const [hasPhoto, setHasPhoto] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
   const [gpsStatus, setGpsStatus] = useState<"loading" | "verified" | "far" | "denied">("loading");
@@ -71,10 +72,12 @@ export const CheckInModal: React.FC = () => {
   const handleSubmit = () => {
     setIsSubmitting(true);
     setTimeout(() => {
-      const result = performCheckIn(checkInVenue, selectedMood, note);
+      const finalNote = note + (hasPhoto ? " 📸 [Anlık Mekân Fotoğrafı Eklendi]" : "");
+      const result = performCheckIn(checkInVenue, selectedMood, finalNote);
       setIsSubmitting(false);
       setCheckInVenue(null);
       setNote("");
+      setHasPhoto(false);
 
       toast.success(`${checkInVenue.name} için check-in tamamlandı!`, {
         description: `Tebrikler! +${result.points} Keşif Puanı kazandın.`,
@@ -182,12 +185,35 @@ export const CheckInModal: React.FC = () => {
             />
           </div>
 
+          {/* Anlık Fotoğraf Ekleme */}
+          <div className="flex items-center justify-between p-3 rounded-2xl bg-[#f4f7f4] border border-[#dbe5de]">
+            <div className="flex items-center gap-2.5">
+              <span className="text-lg">📸</span>
+              <div>
+                <div className="text-xs font-bold text-[#17362c]">Anlık Fotoğraf Ekle</div>
+                <div className="text-[10px] text-[#6c8179]">Check-in'ini görselle kanıtla ve iz bırak</div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setHasPhoto(!hasPhoto);
+                if (!hasPhoto) toast.success("Fotoğraf eklendi! 📸");
+              }}
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
+                hasPhoto ? "bg-[#17362c] text-[#dfff62] shadow-sm" : "bg-white border border-[#cbdace] text-[#476056] hover:bg-gray-50"
+              }`}
+            >
+              {hasPhoto ? "Eklendi ✓" : "+ Fotoğraf"}
+            </button>
+          </div>
+
           {/* Kazanım Bilgisi */}
           <div className="flex items-center justify-between rounded-2xl bg-[#eff9e4] px-4 py-3 text-xs font-semibold text-[#486326]">
             <span className="flex items-center gap-1.5">
               <Award size={15} /> Bu check-in ile:
             </span>
-            <span className="font-extrabold text-[#2c4714]">+25 Keşif Puanı</span>
+            <span className="font-extrabold text-[#2c4714]">{hasPhoto ? "+40 Keşif Puanı (Fotoğraf Bonusu!)" : "+25 Keşif Puanı"}</span>
           </div>
 
           {/* Eylemler */}

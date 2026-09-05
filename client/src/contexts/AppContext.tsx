@@ -4,15 +4,21 @@ import {
   CheckInRecord, 
   Badge, 
   UserProfile, 
-  ActivityNotification 
+  ActivityNotification,
+  Review,
+  LeaderboardUser 
 } from "@/types/venue";
 import { 
   INITIAL_VENUES, 
   INITIAL_BADGES, 
   INITIAL_NOTIFICATIONS, 
   INITIAL_CHECKINS,
+  INITIAL_REVIEWS,
+  INITIAL_LEADERBOARD,
   POPULAR_CITIES 
 } from "@/data/venuesData";
+import { triggerConfetti } from "@/lib/confetti";
+import { sound } from "@/lib/sound";
 import { toast } from "sonner";
 
 interface AppContextType {
@@ -38,6 +44,14 @@ interface AppContextType {
   setSelectedCity: (city: string) => void;
   isCityModalOpen: boolean;
   setIsCityModalOpen: (open: boolean) => void;
+  isAIModalOpen: boolean;
+  setIsAIModalOpen: (open: boolean) => void;
+  isLeaderboardOpen: boolean;
+  setIsLeaderboardOpen: (open: boolean) => void;
+  reviews: Record<number, Review[]>;
+  addReview: (venueId: number, rating: number, text: string, photoUrl?: string) => void;
+  sendCheer: (venue: Venue, type: string) => void;
+  leaderboardUsers: LeaderboardUser[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -50,6 +64,7 @@ const LOCAL_STORAGE_KEYS = {
   NOTIFICATIONS: "izcheckin_notifs_v2",
   FAVORITES: "izcheckin_favorites_v2",
   CITY: "izcheckin_city_v2",
+  REVIEWS: "izcheckin_reviews_v2",
 };
 
 const DEFAULT_USER: UserProfile = {
@@ -141,6 +156,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [checkInVenue, setCheckInVenue] = useState<Venue | null>(null);
   const [unlockedBadgeAlert, setUnlockedBadgeAlert] = useState<Badge | null>(null);
   const [activeTab, setActiveTab] = useState<string>("home");
+  const [isAIModalOpen, setIsAIModalOpen] = useState<boolean>(false);
+  const [isLeaderboardOpen, setIsLeaderboardOpen] = useState<boolean>(false);
+
+  const [reviews, setReviews] = useState<Record<number, Review[]>>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_KEYS.REVIEWS);
+      return saved ? JSON.parse(saved) : INITIAL_REVIEWS;
+    } catch {
+      return INITIAL_REVIEWS;
+    }
+  });
 
   // Sync to LocalStorage
   useEffect(() => {
@@ -178,6 +204,80 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem(LOCAL_STORAGE_KEYS.FAVORITES, JSON.stringify(favorites));
     } catch (e) { console.error(e); }
   }, [favorites]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEYS.REVIEWS, JSON.stringify(reviews));
+    } catch (e) { console.error(e); }
+  }, [reviews]);
+
+  const addReview = (venueId: number, rating: number, text: string, photoUrl?: string) => {
+    const newRev: Review = {
+      id: `rev-${Date.now()}`,
+      venueId,
+      userName: user.name,
+      userAvatar: user.avatarText,
+      rating,
+      text,
+      photoUrl,
+      timestamp: "Şimdi",
+      likesCount: 0,
+    };
+
+    setReviews(prev => ({
+      ...prev,
+      [venueId]: [newRev, ...(prev[venueId] || [])],
+    }));
+
+    const pointsAward = 15;
+    setUser(prev => ({
+      ...prev,
+      currentPoints: prev.currentPoints + pointsAward,
+    }));
+
+    const targetVenue = venues.find(v => v.id === venueId);
+    setNotifications(prev => [
+      {
+        id: `notif-rev-${Date.now()}`,
+        type: "checkin",
+        title: `${targetVenue ? targetVenue.name : "Mekân"} için değerlendirmen paylaşıldı! ⭐`,
+        message: `Topluluk katkısı için +${pointsAward} Keşif Puanı kazandın.`,
+        time: "Şimdi",
+        icon: "✍️",
+        read: false,
+      },
+      ...prev,
+    ]);
+
+    sound.playSuccess();
+    triggerConfetti();
+    toast.success("Yorum ve puanınız paylaşıldı! +15 Keşif Puanı kazandınız 🎉");
+  };
+
+  const sendCheer = (venue: Venue, type: string) => {
+    sound.playSuccess();
+    triggerConfetti();
+    toast.success(`${venue.name} masasına "${type}" jestiniz iletildi! 🥂`);
+  };
+
+  const leaderboardUsers: LeaderboardUser[] = React.useMemo(() => {
+    const list = INITIAL_LEADERBOARD.map(u => {
+      if (u.isCurrentUser) {
+        return {
+          ...u,
+          name: user.name,
+          avatarText: user.avatarText,
+          avatarBg: user.avatarBg,
+          points: user.currentPoints,
+          checkins: user.totalCheckins,
+          badgesCount: badges.filter(b => b.unlocked).length,
+          title: user.title,
+        };
+      }
+      return u;
+    });
+    return list.sort((a, b) => b.points - a.points).map((u, idx) => ({ ...u, rank: idx + 1 }));
+  }, [user, badges]);
 
   const toggleFavorite = (venueId: number) => {
     setFavorites(prev => {
@@ -337,6 +437,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setNotifications(prev => [newNotification, ...prev]);
     }
 
+    // 5. Sound and Confetti effects
+    triggerConfetti();
+    if (freshlyUnlockedBadge) {
+      sound.playBadgeFanfare();
+    } else {
+      sound.playSuccess();
+    }
+
+    // 6. Check for Venue Mayorship (Muhtarlık)
+    const userVenueCheckins = updatedCheckins.filter(c => c.venueId === venue.id).length;
+    if (userVenueCheckins >= 2) {
+      setVenues(prev => prev.map(v => {
+        if (v.id === venue.id) {
+          return {
+            ...v,
+            mayor: {
+              name: user.name,
+              avatar: user.avatarText,
+              checkinCount: userVenueCheckins,
+              since: "Yeni Muhtar 👑",
+            }
+          };
+        }
+        return v;
+      }));
+      toast.success(`🏆 Tebrikler! ${venue.name} mekânının yeni MUHTARI oldun!`);
+    }
+
     return {
       success: true,
       points: pointsToAdd,
@@ -374,6 +502,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSelectedCity,
         isCityModalOpen,
         setIsCityModalOpen,
+        isAIModalOpen,
+        setIsAIModalOpen,
+        isLeaderboardOpen,
+        setIsLeaderboardOpen,
+        reviews,
+        addReview,
+        sendCheer,
+        leaderboardUsers,
       }}
     >
       {children}

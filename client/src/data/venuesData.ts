@@ -950,3 +950,135 @@ export const INITIAL_CHECKINS: CheckInRecord[] = [
     pointsEarned: 25,
   }
 ];
+
+export const INITIAL_REVIEWS: Record<number, import("@/types/venue").Review[]> = {
+  101: [
+    {
+      id: "rev-1",
+      venueId: 101,
+      userName: "Selin Yılmaz",
+      userAvatar: "SY",
+      rating: 5,
+      text: "V60 filtre kahvesi ve taze ekşi mayalı kruvasanı enfes. İçerisi hem çalışmaya hem sohbete uygun ferahlıkta.",
+      timestamp: "2 saat önce",
+      likesCount: 14,
+    },
+    {
+      id: "rev-2",
+      venueId: 101,
+      userName: "Cem Berk",
+      userAvatar: "CB",
+      rating: 5,
+      text: "İstanbul'un açık ara en iyi üçüncü nesil kahvecilerinden. Baristalar çok bilgili.",
+      timestamp: "1 gün önce",
+      likesCount: 8,
+    }
+  ],
+  1: [
+    {
+      id: "rev-3",
+      venueId: 1,
+      userName: "Murat Demir",
+      userAvatar: "MD",
+      rating: 5,
+      text: "Adana'da zırh kıymasını en iyi yapan yerlerden biri. Yanındaki mezeler ve sumaklı soğan efsane.",
+      timestamp: "3 saat önce",
+      likesCount: 22,
+    }
+  ],
+  2: [
+    {
+      id: "rev-4",
+      venueId: 2,
+      userName: "Ece Güneş",
+      userAvatar: "EG",
+      rating: 5,
+      text: "Tarihi Kazancılar Çarşısı'nda kebap yemek bir ritüel. Közlenmiş biberler ve kuyruk yağı dengesi harika.",
+      timestamp: "Dün",
+      likesCount: 19,
+    }
+  ],
+  102: [
+    {
+      id: "rev-5",
+      venueId: 102,
+      userName: "Ahmet Kaya",
+      userAvatar: "AK",
+      rating: 5,
+      text: "Mısır Çarşısı'nın üstündeki tarihi çiniler ve hünkar beğendi muazzam. Asırlık bir lezzet durağı.",
+      timestamp: "5 saat önce",
+      likesCount: 31,
+    }
+  ],
+  106: [
+    {
+      id: "rev-6",
+      venueId: 106,
+      userName: "Deniz Yıldız",
+      userAvatar: "DY",
+      rating: 5,
+      text: "Karaköy Güllüoğlu'nun fıstıklı baklavası sıcak sıcak geldi, çıtırtısı hala aklımda!",
+      timestamp: "Dün",
+      likesCount: 27,
+    }
+  ]
+};
+
+export const INITIAL_LEADERBOARD: import("@/types/venue").LeaderboardUser[] = [
+  {
+    rank: 1,
+    name: "Barış Özcan",
+    avatarText: "BÖ",
+    avatarBg: "bg-amber-500 text-white",
+    city: "İstanbul",
+    points: 1840,
+    checkins: 46,
+    badgesCount: 6,
+    title: "Türkiye Büyük Kaşifi 🏆",
+  },
+  {
+    rank: 2,
+    name: "Zeynep Aksoy",
+    avatarText: "ZA",
+    avatarBg: "bg-purple-600 text-white",
+    city: "İzmir",
+    points: 1420,
+    checkins: 38,
+    badgesCount: 5,
+    title: "Ege Gurmesi 🌊",
+  },
+  {
+    rank: 3,
+    name: "Kaan Arslan",
+    avatarText: "KA",
+    avatarBg: "bg-emerald-600 text-white",
+    city: "Ankara",
+    points: 980,
+    checkins: 25,
+    badgesCount: 4,
+    title: "Başkent Rehberi ⭐",
+  },
+  {
+    rank: 4,
+    name: "Cebrail Kara",
+    avatarText: "CK",
+    avatarBg: "bg-[#deff55] text-[#17362c]",
+    city: "Adana",
+    points: 150,
+    checkins: 2,
+    badgesCount: 1,
+    title: "Türkiye Şehir Kaşifi",
+    isCurrentUser: true,
+  },
+  {
+    rank: 5,
+    name: "Ayşe Melek",
+    avatarText: "AM",
+    avatarBg: "bg-pink-600 text-white",
+    city: "Gaziantep",
+    points: 120,
+    checkins: 2,
+    badgesCount: 1,
+    title: "Antep Lezzetçisi 🍯",
+  },
+];

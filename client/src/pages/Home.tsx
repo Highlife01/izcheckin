@@ -7,10 +7,12 @@ import { VenueDetailModal } from "@/components/VenueDetailModal";
 import { CheckInModal } from "@/components/CheckInModal";
 import { BadgeUnlockedModal } from "@/components/BadgeUnlockedModal";
 import { CitySelectModal } from "@/components/CitySelectModal";
+import { AIAssistantModal } from "@/components/AIAssistantModal";
+import { LeaderboardModal } from "@/components/LeaderboardModal";
 import { POPULAR_CITIES } from "@/data/venuesData";
 import { 
   Compass, Search, Bell, Users, MapPin, LocateFixed, 
-  Sparkles, Star, Flame, Check, Plus, Heart, ChevronRight, TrendingUp, ChevronDown 
+  Sparkles, Star, Flame, Check, Plus, Heart, ChevronRight, TrendingUp, ChevronDown, Trophy 
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -29,7 +31,9 @@ export default function Home({ initialTab = "home" }: { initialTab?: string }) {
     setActiveTab,
     selectedCity,
     setSelectedCity,
-    setIsCityModalOpen 
+    setIsCityModalOpen,
+    setIsAIModalOpen,
+    setIsLeaderboardOpen,
   } = useApp();
 
   const [search, setSearch] = useState("");
@@ -217,6 +221,41 @@ export default function Home({ initialTab = "home" }: { initialTab?: string }) {
                     placeholder="Mekân adı, şehir (İstanbul, Ankara, İzmir), tatlı veya kahve ara..."
                     className="h-14 rounded-2xl border-[#dbe5de] bg-white pl-12 pr-4 text-[14px] shadow-[0_9px_30px_rgba(37,70,54,0.05)] placeholder:text-[#a2b2aa] focus-visible:border-[#9ead3b] focus-visible:ring-[#dfff62]"
                   />
+                </div>
+
+                {/* AI Asistan & Liderlik Hızlı Aksiyonları */}
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-xl">
+                  <button
+                    onClick={() => setIsAIModalOpen(true)}
+                    className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-[#17362c] to-[#255243] text-white border border-[#2b594b] shadow-md hover:shadow-lg hover:border-[#deff55]/50 transition group text-left active:scale-98"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-[#deff55] text-[#17362c] flex items-center justify-center font-bold shrink-0 group-hover:scale-105 transition shadow-sm">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black text-[#deff55]">Nereye Gitsem?</span>
+                        <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-[#deff55]/20 text-[#deff55] font-extrabold uppercase">AI</span>
+                      </div>
+                      <p className="text-[11px] text-white/70">Moduna göre anında akıllı öneri al</p>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setIsLeaderboardOpen(true)}
+                    className="flex items-center gap-3 p-3 rounded-2xl bg-white border border-[#dbe5de] text-[#17362c] shadow-sm hover:border-amber-400/60 hover:shadow-md transition group text-left active:scale-98"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-amber-400 text-amber-950 flex items-center justify-center font-bold shrink-0 group-hover:scale-105 transition shadow-sm">
+                      <Trophy className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black text-[#17362c]">Şehir Liderleri</span>
+                        <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 font-extrabold uppercase">TOP 10</span>
+                      </div>
+                      <p className="text-[11px] text-[#5c7a6c]">Mekân muhtarları & kaşif ligi</p>
+                    </div>
+                  </button>
                 </div>
               </div>
 
@@ -498,6 +537,8 @@ export default function Home({ initialTab = "home" }: { initialTab?: string }) {
       <CheckInModal />
       <BadgeUnlockedModal />
       <CitySelectModal />
+      <AIAssistantModal />
+      <LeaderboardModal />
     </div>
   );
 }
